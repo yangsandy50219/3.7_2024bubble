@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <title>2024年全國各縣市15~19歲女性生育率</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #f5f5f5;
+            font-family: "Microsoft JhengHei", sans-serif;
+        }
+
+        #bubbleChart {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* ⭐ 自訂 ECharts tooltip 字體大小 */
+        div[id^="bubbleChart"] .echarts-tooltip {
+            font-size: 20px !important;
+            /* ← 字體大小在這裡調 */
+            line-height: 1.6;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="bubbleChart"></div>
+
+    <!-- ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+    <script>
+        /* ===========================================================
+           ⭐ 設定你的 CSV 檔名
+        =========================================================== */
+        const csvFile = "3.7 2020~2024年全國各縣市15~19歲女性生育率.csv";
+
+        /* ===========================================================
+           ⭐ 每個縣市固定顏色（跨年份一致用這組）
+           （色系偏淺＋透明度，避免太深）
+        =========================================================== */
+        const colorMap = {
+            "新北市": "rgba(133, 193, 233, 0.8)", // 淺藍
+            "臺北市": "rgba(119, 180, 132, 0.6)", // 會被下面特例覆蓋
+            "台北市": "rgba(119, 180, 132, 0.6)",
+            "桃園市": "rgba(248, 196, 113, 0.8)", // 淺橘
+            "臺中市": "rgba(241, 148, 138, 0.8)", // 淺紅
+            "台中市": "rgba(241, 148, 138, 0.8)",
+            "臺南市": "rgba(214, 162, 232, 0.8)", // 淺紫
+            "台南市": "rgba(214, 162, 232, 0.8)",
+            "高雄市": "rgba(162, 217, 206, 0.8)", // 淺青綠
+            "宜蘭縣": "rgba(157,  47,  71, 0.7)",
+            "新竹縣": "rgba(245, 245, 210, 0.8)",
+            "苗栗縣": "rgba(227,  38,  54, 0.6)",
+            "彰化縣": "rgba(250, 219, 216, 0.8)",
+            "南投縣": "rgba(192, 192, 192, 0.8)",
+            "雲林縣": "rgba(  0,  47, 127, 0.7)",
+            "嘉義縣": "rgba(  0,   0,   0, 0.6)",
+            "屏東縣": "rgba( 94, 134, 193, 0.8)",
+            "臺東縣": "rgba(249, 231, 159, 0.8)",
+            "台東縣": "rgba(249, 231, 159, 0.8)",
+            "花蓮縣": "rgba(197, 225, 165, 0.8)",
+            "澎湖縣": "rgba(215, 189, 226, 0.8)",
+            "基隆市": "rgba(204, 119,  34, 0.7)",
+            "新竹市": "rgba(244, 210, 178, 0.8)",
+            "嘉義市": "rgba(209, 242, 235, 0.8)",
+            "金門縣": "rgba(255, 204, 188, 0.8)",
+            "連江縣": "rgba(195, 230, 203, 0.8)"
+        };
+
+        /* ===========================================================
+           ⭐ 讀取 CSV
+        =========================================================== */
+        fetch(csvFile)
+            .then(res => res.text())
+            .then(text => {
+                const cleaned = text.replace(/^\uFEFF/, "");
+                const lines = cleaned.trim().split(/\r?\n/);
+
+                let data2024 = [];
+
+                for (let i = 1; i < lines.length; i++) {
+                    const row = lines[i].split(",");
+
+                    const name = row[0].trim();
+                    const val = row[5].trim();   // 2024 年 F 欄
+
+                    if (val === "—" || val === "" || isNaN(Number(val))) continue;
+
+                    data2024.push({
+                        name,
+                        value: Number(val)
+                    });
+                }
+
+                drawBubbleChart(data2024);
+            });
+
+        /* ===========================================================
+           ⭐ 力學泡泡圖
+        =========================================================== */
+        function drawBubbleChart(data) {
+            const chart = echarts.init(document.getElementById("bubbleChart"));
+
+            const maxVal = Math.max(...data.map(d => d.value));
+
+            // ⭐ 先算出每個縣市的排名（值越大排名越前）
+            const sorted = [...data].sort((a, b) => b.value - a.value);
+            const rankMap = {};
+            sorted.forEach((d, idx) => {
+                rankMap[d.name] = idx + 1; // 第1名、2名...
+            });
+
+            const nodes = data.map((d, i) => {
+                let style = {};
+
+                // ⭐ 台北市特殊樣式（優先於 colorMap）
+                if (d.name.includes("臺北市") || d.name.includes("台北市")) {
+                    style = {
+                        color: "rgba(119,180,132,0.7)", // #77b484 透明度 0.6
+                        borderColor: "#599c49",
+                        borderWidth: 4
+                    };
+                } else {
+                    const baseColor = colorMap[d.name] || "rgba(200,200,200,0.7)";
+                    style = { color: baseColor };
+                }
+
+                return {
+                    name: d.name,
+                    value: d.value,
+                    symbolSize: 50 + (d.value / maxVal) * 100,
+                    draggable: true,
+                    itemStyle: style,
+                    label: {
+                        show: true,
+                        fontSize: 18,
+                        formatter: d.name
+                    }
+                };
+            });
+
+            const option = {
+                title: {
+                    text: "2024年全國各縣市15~19歲女性生育率",
+                    left: 20,
+                    top: 20,
+                    textStyle: { fontSize: 26 }
+                },
+                tooltip: {
+                    formatter: p => {
+                        const name = p.data.name;
+                        const val = p.data.value;
+                        const rank = rankMap[name];
+                        return `${name}<br>生育率：${val}<br>排名：第${rank}名`;
+                    }
+                },
+                series: [
+                    {
+                        type: "graph",
+                        layout: "force",
+                        roam: true,
+                        center: ['50%', '50%'],
+                        force: {
+                            repulsion: 340,
+                            gravity: 0.28,
+                            edgeLength: 60
+                        },
+                        data: nodes
+                    }
+                ]
+            };
+
+            chart.setOption(option);
+
+            window.addEventListener("resize", () => chart.resize());
+        }
+    </script>
+
+</body>
+
+</html>
