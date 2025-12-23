@@ -120,12 +120,12 @@
                 // ⭐ 台北市特殊樣式（優先於 colorMap）
                 if (d.name.includes("臺北市") || d.name.includes("台北市")) {
                     style = {
-                        color: "rgba(119,180,132,0.7)", // #77b484 透明度 0.6
+                        color: "rgba(119,180,132,0.8)", // #77b484 透明度 0.6
                         borderColor: "#599c49",
-                        borderWidth: 4
+                        borderWidth: 6
                     };
                 } else {
-                    const baseColor = colorMap[d.name] || "rgba(200,200,200,0.7)";
+                    const baseColor = colorMap[d.name] || "rgba(200,200,200,0.8)";
                     style = { color: baseColor };
                 }
 
